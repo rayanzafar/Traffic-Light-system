@@ -1,0 +1,169 @@
+
+
+\\ T flip-flop code 
+module TflipFlop(q,clk,t,rst);
+	output reg  q;
+	input clk, rst ;
+	input  t;
+	initial q = 1'b1;
+	always @ (posedge clk or posedge rst)begin
+		if(rst==1)
+			q <= 1'b0;
+		else 
+			q <= t^q ;
+		end
+endmodule
+//D flip-flop.
+module DflipFlop(q,clk, d, rst);
+    output reg  q;
+    input clk, rst;
+    input d;
+    initial q = 1'b0 ; 
+    always @ (posedge clk or posedge rst) begin 
+    if (rst==1'b1) 
+        q <= 1'b0;
+    else
+        q <= d;
+    end
+endmodule
+
+
+
+
+
+
+
+//SEQUENTIAL LOGIC:
+//5 bit Ripple Carry Counter. 
+
+module RCC_5bit (q,clk, rst); 
+	output[4:0]q ;
+	input clk, rst ;
+	TflipFlop t1 ( q[0], clk,1,rst ); 
+	TflipFlop t2 ( q[1], ~q[0],1, rst ); 
+	TflipFlop t3 ( q[2], ~q[1],1,rst ); 
+	TflipFlop t4 ( q[3], ~q[2],1,rst ); 
+	TflipFlop t5 ( q[4], ~q[3] ,1,rst ); 
+endmodule
+//Rcc timer 5bit  
+module Timer (q1, T, clk, rst);
+    input clk, rst;
+    output   T ;
+    output  [4:0]q1;
+    wire w1 ,w2 ; 
+    RCC_5bit rcc1(q1, clk, rst);
+    assign w1 = q1[0] & q1[1] & q1[2] & q1[3] & q1[4];
+    assign w2 = q1[0] & ~q1[1] & q1[2] & ~q1[3] & ~q1[4];
+    assign T = w1 | w2 ;   
+endmodule
+
+
+
+
+
+
+
+
+
+
+//COMBINATIONAL LOGI   - Traffic Light Controller Modul.
+module TrafficLightController (p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g, A, B, C);
+    output p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g;
+    input A, B, C;
+    //p1
+    assign p1r = A | B;
+    assign p1y = ~A & ~B & C;
+    assign p1g = ~A & ~B & ~C;
+    //p2
+    assign p2r = ~B;
+    assign p2y = ~A & B & C;
+    assign p2g = ~A & B & ~C;
+    //p3
+    assign p3r = ~A;
+    assign p3y = A & ~B & C;
+    assign p3g = A & ~B & ~C;
+endmodule
+//Next State Module.
+module Next_State(A1, B1, C1, A, B, C);
+    input   A , B , C;
+    output A1, B1 , C1;
+    wire a1, a2, a3, b1, b2, b3, c1, c2, c3;
+    wire o1 , o2 , o3;
+    wire t;
+    assign t = 1'b1;
+    assign a1 = B & C & t;
+    assign a2 = A & ~B & ~C;
+    assign a3 = A & ~t;
+    assign b1 = ~A & ~B & C & t;
+    assign b2 = ~A & B & ~C;
+    assign b3 = B & ~t;
+    assign c1 = ~A & ~C & t;
+    assign c2 = ~B & ~C & t;
+    assign c3 = C & ~t;
+    assign A1 = a1 | a2 | a3;
+    assign B1 = b1 | b2 | b3;
+    assign C1 = c1 | c2 | c3;
+endmodule
+
+//D flip-flops to connect between all the previous modules.
+module Dffs(p1r,p1y,p1g,p2r,p2y,p2g,p3r,p3y,p3g,clk,rst);
+    output p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g;
+    input clk, rst;   
+    wire A, B, C;
+    wire A1,B1,C1; 
+    wire T ; 
+    //D flip-flops:
+    DflipFlop dff1(A, T, A1, rst );
+    DflipFlop dff2(B, T, B1, rst );
+    DflipFlop dff3(C, T ,C1, rst );
+    //Previous Modules:
+    Next_State ns1(A1, B1, C1, A, B, C);
+    Timer t1 (q1,T,clk,rst) ;
+    TrafficLightController  tlc1 (p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g, A, B, C);
+endmodule
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//
+
+
+
+TestBench
+`timescale 1s/1s
+module trafficlight();
+reg   clk , rst ; 
+wire  p1r,p1y,p1g,p2r,p2y,p2g,p3r,p3y,p3g ;
+Dffs Dffs0(p1r,p1y,p1g,p2r,p2y,p2g,p3r,p3y,p3g,clk,rst);
+initial clk <= 1'b1 ; 
+initial  rst <= 1'b0  ;   
+always begin
+    #0
+    clk = 0;
+    #0.5
+    clk = 1 ; 
+  
+    end
+    initial begin 
+        #150
+        $display("p1r = %b p1y = %b  p1g = %b ",p1r,p1y,p1g);
+        $display("p2r = %b p2y = %b p2g = %b ",p2r,p2y,p2g);
+        $display("p3r = %b p3y = %b p3g = %b ",p3r,p3y,p3g);
+        #150
+        $display("p1r = %b p1y = %b  p1g = %b ",p1r,p1y,p1g);
+        $display("p2r = %b p2y = %b p2g = %b ",p2r,p2y,p2g);
+        $display("p3r = %b p3y = %b p3g = %b ", p3r, p3y ,p3g );
+        $stop ;
+    end
+endmodule
