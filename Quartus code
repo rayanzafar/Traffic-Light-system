@@ -1,0 +1,136 @@
+//D flip-flop.
+module DflipFlop(q, clk, d, rst, en);
+
+    output reg  q;
+    input clk, rst, en;
+    input d;
+
+    always @ (posedge clk or posedge rst)
+    if (rst) begin
+        q <= 'b0;
+    end else if (en == 0);
+    else begin
+        q <= d;
+    end
+endmodule
+//timer 
+module Timer (T, clk , rst);
+    input clk , rst ;
+    output reg T;
+    reg [4:0]q;
+    wire w1, w2;
+	 initial q <= 5'b00000;
+	 
+    always @ (posedge clk or posedge rst ) begin
+	 if (rst) begin
+		q <= 'b0;
+		end
+		else if (q == 5'b11011) begin
+			T <= 1'b1; 
+			q <= q + 1;
+		end
+		else if (q == 5'b11111) begin
+			T <= 1'b1;
+			q <= 5'b00000;
+		end 
+		else begin
+			T <= 1'b0;	
+			q <= q + 1;
+		end
+	 end
+endmodule
+
+
+
+
+//COMBINATIONAL LOGIC:
+//Traffic Light Controller Module.
+module TrafficLightController (p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g, A, B, C);
+    output p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g;
+    input A, B, C;
+    //p1
+    assign p1r = A | B;
+    assign p1y = ~A & ~B & C;
+    assign p1g = ~A & ~B & ~C;
+    //p2
+    assign p2r = ~B;
+    assign p2y = ~A & B & C;
+    assign p2g = ~A & B & ~C;
+
+    //p3
+    assign p3r = ~A;
+    assign p3y = A & ~B & C;
+    assign p3g = A & ~B & ~C;
+endmodule
+
+//Next State Module.
+module Next_State(A1, B1, C1, A, B, C);
+    input   A , B , C;
+    output A1, B1 , C1;
+    wire a1, a2, a3, b1, b2, b3, c1, c2, c3;
+    wire o1 , o2 , o3;
+    wire t;
+    assign t = 1'b1;
+    assign a1 = B & C & t;
+    assign a2 = A & ~B & ~C;
+    assign a3 = A & ~t;
+    assign b1 = ~A & ~B & C & t;
+    assign b2 = ~A & B & ~C;
+    assign b3 = B & ~t;
+    assign c1 = ~A & ~C & t;
+    assign c2 = ~B & ~C & t;
+    assign c3 = C & ~t;
+    assign A1 = a1 | a2 | a3;
+    assign B1 = b1 | b2 | b3;
+    assign C1 = c1 | c2 | c3;
+endmodule
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//D flip-flops to connect between all the previous modules.
+module Dffs(p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g, clk, rst);
+    output p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g;
+    input clk, rst;
+	 wire A1, B1 ,C1 ; 
+    wire A, B, C;
+	 wire T;
+    //D flip-flops:
+    DflipFlop dff1(A, T, A1, rst, 1);
+    DflipFlop dff2(B, T, B1, rst, 1);
+    DflipFlop dff3(C, T, C1, rst, 1);
+    //Previous Modules:
+    Next_State ns1(A1, B1, C1, A, B, C);
+    Timer t1(T, clk,rst );
+    TrafficLightController  tlc1 (p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g, A, B, C);
+endmodule
+
+
+
+//TestBench Quartus 
+module trafficlight(p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g, clk, rst , bclk);
+    input bclk, rst;
+    output reg clk;
+    output p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g;
+	 Dffs dffs1(p1r, p1y, p1g, p2r, p2y, p2g, p3r, p3y, p3g, clk, rst);
+    reg [31:0]count;
+    initial clk = 1'b0;
+    always @ (negedge bclk) begin
+        count = count + 1;
+        if (count >= 25000000) begin
+            count <= 0;
+            clk <= ~clk;
+        end
+    end	 
+endmodule
